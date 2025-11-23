@@ -3,7 +3,6 @@ const mongoose = require("mongoose");
 const cors = require("cors");
 const fs = require("fs");
 const path = require("path");
-const path = require("path");
 const Image = require(path.join(__dirname, "models", "Image"));
 const Product = require(path.join(__dirname, "models", "Product"));
 const app = express();
