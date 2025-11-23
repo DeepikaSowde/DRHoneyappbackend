@@ -1,12 +1,24 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
+const fs = require("fs");
+const path = require("path");
 const Image = require("./models/Image");
 const Product = require("./models/Product");
 const app = express();
 const port = 5000;
 
 app.use(cors()); // Enable CORS for all origins
+
+// Log the contents of models directory to verify files are present on startup
+const modelsPath = path.join(__dirname, "models");
+fs.readdir(modelsPath, (err, files) => {
+  if (err) {
+    console.error("Error reading models directory:", err);
+  } else {
+    console.log("Models directory contents:", files);
+  }
+});
 
 // MongoDB Atlas connection URI
 const mongoURI =
