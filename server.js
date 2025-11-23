@@ -40,7 +40,11 @@ app.get("/image/:id", async (req, res) => {
     if (!image) {
       return res.status(404).send("Image not found");
     }
-    res.contentType(image.contentType);
+    res.set({
+      'Content-Type': image.contentType,
+      'Cache-Control': 'public, max-age=31536000',
+      'Content-Disposition': `inline; filename="${req.params.id}${image.contentType.split('/')[1] ? '.' + image.contentType.split('/')[1] : ''}"`
+    });
     res.send(image.data);
   } catch (error) {
     res.status(500).send(error.message);

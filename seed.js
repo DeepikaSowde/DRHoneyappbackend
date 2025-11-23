@@ -66,45 +66,41 @@ async function seedImagesFromFolder() {
   }
 }
 
-// Seed sample products linked with image ObjectIds
+// Seed products dynamically from image file names
 async function seedProducts(imageIdMap) {
   const Product = require("./models/Product");
 
-  const products = [
-    {
-      title: "Cardamom 8mm",
-      priceRange: "₹230 - ₹2,150",
-      rating: 4.5,
-      reviews: 190,
-      imageFile: "honeybanner1.jpg",
-    },
-    {
-      title: "Black Pepper",
-      priceRange: "₹130 - ₹620",
-      rating: 4.3,
-      reviews: 134,
-      imageFile: "honeybanner2.jpg",
-    },
-  ];
+  for (const filename in imageIdMap) {
+    const title = filename.substring(0, filename.lastIndexOf('.')) || filename;
 
-  for (const productData of products) {
-    if (!imageIdMap[productData.imageFile]) {
-      console.log(
-        `Image for product ${productData.title} not found, skipping product.`
-      );
-      continue;
-    }
     const product = new Product({
-      title: productData.title,
-      priceRange: productData.priceRange,
-      rating: productData.rating,
-      reviews: productData.reviews,
-      image: imageIdMap[productData.imageFile],
+      title: title,
+      priceRange: generatePriceRange(),
+      rating: parseFloat(generateRating()),
+      reviews: generateReviews(),
+      image: imageIdMap[filename],
     });
 
     await product.save();
-    console.log(`Seeded product: ${productData.title}`);
+    console.log(`Seeded product: ${title}`);
   }
 
   console.log("All products have been seeded.");
+}
+
+// Function to generate random price range string
+function generatePriceRange() {
+  const min = Math.floor(Math.random() * 100) + 50; // 50 to 149
+  const max = min + Math.floor(Math.random() * 1000) + 100; // min + 100 to min + 1099
+  return "₹" + min + " - ₹" + max;
+}
+
+// Function to generate random rating from 3.5 to 5.0
+function generateRating() {
+  return (Math.random() * 1.5 + 3.5).toFixed(1);
+}
+
+// Function to generate random number of reviews between 10 and 500
+function generateReviews() {
+  return Math.floor(Math.random() * 491) + 10;
 }
