@@ -5,6 +5,7 @@ const fs = require("fs");
 const path = require("path");
 const Image = require(path.join(__dirname, "models", "Image"));
 const Product = require(path.join(__dirname, "models", "Product"));
+const Order = require(path.join(__dirname, "models", "Order"));
 const app = express();
 const port = 5000;
 
@@ -73,6 +74,77 @@ app.get("/products", async (req, res) => {
     res.json(productsWithImageUrl);
   } catch (error) {
     res.status(500).send(error.message);
+  }
+});
+
+// Endpoint to create a new order
+app.post("/create-order", express.json(), async (req, res) => {
+  try {
+    const { orderId, items, totalAmount, customerInfo } = req.body;
+
+    if (!orderId || !items || !totalAmount) {
+      return res.status(400).json({ error: "Missing required fields: orderId, items, totalAmount" });
+    }
+
+    const order = new Order({
+      orderId,
+      items,
+      totalAmount,
+      customerInfo: customerInfo || {},
+      status: 'pending'
+    });
+
+    await order.save();
+    res.status(201).json({ message: "Order created successfully", order });
+  } catch (error) {
+    console.error("Error creating order:", error);
+    if (error.code === 11000) {
+      res.status(409).json({ error: "Order ID already exists" });
+    } else {
+      res.status(500).json({ error: "Failed to create order" });
+    }
+  }
+});
+
+// Endpoint to verify payment and update order status
+app.post("/verify-payment", express.json(), async (req, res) => {
+  try {
+    const { orderId, paymentId, status } = req.body;
+
+    if (!orderId || !status) {
+      return res.status(400).json({ error: "Missing required fields: orderId, status" });
+    }
+
+    const order = await Order.findOne({ orderId });
+    if (!order) {
+      return res.status(404).json({ error: "Order not found" });
+    }
+
+    order.status = status;
+    if (paymentId) {
+      order.paymentId = paymentId;
+    }
+    order.updatedAt = new Date();
+
+    await order.save();
+    res.json({ message: "Payment status updated successfully", order });
+  } catch (error) {
+    console.error("Error verifying payment:", error);
+    res.status(500).json({ error: "Failed to verify payment" });
+  }
+});
+
+// Endpoint to get order status
+app.get("/order/:orderId", async (req, res) => {
+  try {
+    const order = await Order.findOne({ orderId: req.params.orderId });
+    if (!order) {
+      return res.status(404).json({ error: "Order not found" });
+    }
+    res.json(order);
+  } catch (error) {
+    console.error("Error fetching order:", error);
+    res.status(500).json({ error: "Failed to fetch order" });
   }
 });
 
