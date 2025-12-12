@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 const fs = require("fs");
 const path = require("path");
 const Image = require("./models/Image");
+const Product = require("./models/Product");
 
 // MongoDB Atlas connection URI
 const mongoURI =
@@ -12,47 +13,67 @@ mongoose
     useNewUrlParser: true,
     useUnifiedTopology: true,
   })
-  .then(() => {
+  .then(async () => {
     console.log("Connected to MongoDB Atlas");
+    // Clear existing data
+    await Image.deleteMany({});
+    await Product.deleteMany({});
+    console.log("Cleared existing images and products");
     seedImagesFromFolder();
   })
   .catch((error) => console.error("Error connecting to MongoDB Atlas:", error));
 
 async function seedImagesFromFolder() {
   try {
-    const imagesDir = "C:/Users/kaviv/DRHoneyapp/dbassets";
-    const files = fs.readdirSync(imagesDir);
+    const imagesDir = path.join(__dirname, "..", "dbassets");
 
-    // Map of filename -> image ObjectId
+    // Map of filename -> { id, category }
     const imageIdMap = {};
 
-    for (const file of files) {
-      const filePath = path.join(imagesDir, file);
-      const imgData = fs.readFileSync(filePath);
-      const ext = path.extname(file).toLowerCase();
+    // Recursive function to read directories
+    async function readDirectory(dirPath, category = null) {
+      const items = fs.readdirSync(dirPath);
 
-      // Determine content type based on file extension
-      let contentType = null;
-      if (ext === ".jpg" || ext === ".jpeg") {
-        contentType = "image/jpeg";
-      } else if (ext === ".png") {
-        contentType = "image/png";
-      } else if (ext === ".gif") {
-        contentType = "image/gif";
-      } else {
-        console.log(`Skipping unsupported file type: ${file}`);
-        continue;
+      for (const item of items) {
+        const itemPath = path.join(dirPath, item);
+        const stat = fs.statSync(itemPath);
+
+        if (stat.isDirectory()) {
+          // If it's a directory, recurse with the directory name as category
+          await readDirectory(itemPath, item);
+        } else {
+          // If it's a file, process as image
+          const ext = path.extname(item).toLowerCase();
+
+          // Determine content type based on file extension
+          let contentType = null;
+          if (ext === ".jpg" || ext === ".jpeg") {
+            contentType = "image/jpeg";
+          } else if (ext === ".png") {
+            contentType = "image/png";
+          } else if (ext === ".gif") {
+            contentType = "image/gif";
+          } else {
+            console.log(`Skipping unsupported file type: ${item}`);
+            continue;
+          }
+
+          const imgData = fs.readFileSync(itemPath);
+
+          const image = new Image({
+            data: imgData,
+            contentType: contentType,
+            category: category,
+          });
+
+          const savedImage = await image.save();
+          imageIdMap[item] = { id: savedImage._id, category };
+          console.log(`Seeded image: ${item}, category: ${category}, with id: ${savedImage._id}`);
+        }
       }
-
-      const image = new Image({
-        data: imgData,
-        contentType: contentType,
-      });
-
-      const savedImage = await image.save();
-      imageIdMap[file] = savedImage._id;
-      console.log(`Seeded image: ${file}, with id: ${savedImage._id}`);
     }
+
+    await readDirectory(imagesDir);
 
     console.log("All images from dbassets folder have been seeded.");
 
@@ -71,6 +92,7 @@ async function seedProducts(imageIdMap) {
   const Product = require("./models/Product");
 
   for (const filename in imageIdMap) {
+    const { id, category } = imageIdMap[filename];
     const title = filename.substring(0, filename.lastIndexOf('.')) || filename;
 
     const product = new Product({
@@ -78,11 +100,12 @@ async function seedProducts(imageIdMap) {
       priceRange: generatePriceRange(),
       rating: parseFloat(generateRating()),
       reviews: generateReviews(),
-      image: imageIdMap[filename],
+      image: id,
+      category: category,
     });
 
     await product.save();
-    console.log(`Seeded product: ${title}`);
+    console.log(`Seeded product: ${title}, category: ${category}`);
   }
 
   console.log("All products have been seeded.");

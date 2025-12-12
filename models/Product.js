@@ -7,6 +7,7 @@ const productSchema = new Schema({
   rating: { type: Number },
   reviews: { type: Number },
   image: { type: Schema.Types.ObjectId, ref: "Image" },
+  category: { type: String },
 });
 
 module.exports = mongoose.model("Product", productSchema);

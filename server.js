@@ -51,7 +51,7 @@ app.get("/image/:id", async (req, res) => {
   }
 });
 
-// Endpoint to fetch all products with image URLs instead of embedding image data
+// Endpoint to fetch all products with image URLs and category
 app.get("/products", async (req, res) => {
   try {
     const products = await Product.find().populate("image");
